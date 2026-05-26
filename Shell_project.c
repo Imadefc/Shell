@@ -129,13 +129,17 @@ int main(void)
 
         //Comandos internos
         if(strcmp(argv[0], "cd")==0){
-          if(argc == 2){
-            int controlch =chdir(argv[1]);
-            if(controlch==-1){
+          char *dest =NULL;
+          if(argc==1)dest=getenv("HOME");
+          if(argc == 2)dest=argv[1];
+          if(des!=NULL){
+            int controlch =chdir(dest);
+            if(controlch==-2){
               perror("chdir");
             }
-          }else{
-            printf("Error con los argumentos de cd\n");   
+          }
+          if(argc>=3){
+            printf("Too many arguments");
           }
           continue;
         }
