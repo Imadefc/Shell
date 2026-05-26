@@ -16,6 +16,7 @@ int parse_comments(char **);
 int parse_background(char **, int *);
 int parse_redirections(char **,  char **, char **);
 int parse_autovars(int, char **, int, int, int);
+int parse_escape(char **);
 
 #endif
 

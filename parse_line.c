@@ -302,3 +302,18 @@ int parse_autovars(int argc,char **argv,int pid,int waitpid, int wstatus ){
       }
     }
 }
+int parse_escape(char **argv)
+{
+    int argc = 0;
+    char *p, *q;
+    while (*argv) {
+		for (p = q = *argv; *q; p++, q++) {
+            if (*q == '\\') q++;
+            *p = *q;
+        }
+        *p = *q;    // copy null char
+        argv++;
+        argc++;
+    }
+    return argc;
+}
