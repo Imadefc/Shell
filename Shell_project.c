@@ -103,7 +103,8 @@ int main(void)
     int pid_fork, pid_wait;     // pid for created and waited process
     int wstatus;           // status returned by waitpid
     listaProcesos = new_list("Jobs");
-    char *file_in, *file_out;   // for redirections
+    char *file_in=NULL;
+    char *file_out=NULL;   // for redirections
     terminal_signals(SIG_IGN);
     int pid_terminal = getpid();
     signal(SIGCHLD, myHandler); //manejador de la señal sigchild
@@ -147,7 +148,7 @@ int main(void)
           print_job_list(listaProcesos);
           mask_signal(SIGCHLD, SIG_UNBLOCK);
           continue;
-        }
+        }/*
        if(strcmp(argv[0], "exit")==0){
          if(argc>1){
 
@@ -169,7 +170,57 @@ int main(void)
            printf("Error con los argumentos de exit\n");
            continue;
          }
-       }
+       }*/
+
+        //Comando fg para poner en primer plano tareas en segundo plan
+        // y tareas suspendidas
+        if(strcmp(argv[0], "fg")==0){
+          if(argc==2){
+            mask_signal(SIGCHLD, SIG_BLOCK);
+            int pos = atoi(argv[1]);
+            if(pos==0){
+              printf("Segundo argumento invalido: %s.\n",argv[1]);
+              mask_signal(SIGCHLD, SIG_UNBLOCK);
+              continue;
+            }
+            job * elegido = get_item_bypos(listaProcesos, pos);
+            if(elegido!=NULL){
+              pid_t fgpgid = elegido->pgid;
+              printf("[%d] (%s) Running in FOREGROUND\n", fgpgid, elegido->command);
+              tcsetpgrp(STDIN_FILENO, fgpgid);//le damos el control de la terminal al grupo del proceso
+              if(elegido->state == STOPPED){  //Si estaba parado le damos la señal que continue
+                kill(-fgpgid,SIGCONT);
+              }
+              elegido->state = FOREGROUND;
+
+
+              pid_wait = waitpid(fgpgid, &wstatus, WUNTRACED);
+              tcsetpgrp(STDIN_FILENO,pid_terminal);
+
+              if(pid_wait != -1) {
+                        if (WIFSIGNALED(wstatus)) {
+                            printf("[%d] (%s) Signaled by signal %d\n", pid_wait, elegido->command, WTERMSIG(wstatus));
+                            remove_item(listaProcesos, elegido);
+                        } else if (WIFEXITED(wstatus)) {
+                            printf("[%d] (%s) Exit by signal %d\n", pid_wait, elegido->command, WEXITSTATUS(wstatus));
+                            remove_item(listaProcesos, elegido);
+                        } else if (WIFSTOPPED(wstatus)) {
+                            printf("[%d] (%s) Stopped by Signal: %d\n", pid_wait, elegido->command, WSTOPSIG(wstatus));
+                            elegido->state = STOPPED;
+                        }
+                    } else {
+                        perror("waitpid en fg");
+                    }            
+            }
+            mask_signal(SIGCHLD,SIG_UNBLOCK);
+
+
+          }else{
+            printf("Error en los argumentos.\n");
+          }
+          continue;
+        }
+       
         
         pid_fork = fork();
         if(pid_fork == -1){
