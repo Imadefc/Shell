@@ -34,8 +34,7 @@
 // -----------------------------------------------------------------------------
 // Declara aqui las variables globales que tengan que ser accedidas desde los
 //  manejadores establecidos con signal() o sigaction()i
-list_head_t * listaProcesos; 
-
+list_head_t * listaProcesos;
 // -----------------------------------------------------------------------------
 // Useful functions to deal with signal handlers and signal masks
 // -----------------------------------------------------------------------------
@@ -130,22 +129,23 @@ int main(void)
         //Comandos internos
         if(strcmp(argv[0], "cd")==0){
           char *dest =NULL;
-          if(argc==1)dest=getenv("HOME");
-          if(argc == 2)dest=argv[1];
-          if(des!=NULL){
-            int controlch =chdir(dest);
-            if(controlch==-2){
+          if(argc==1)dest=getenv("HOME"); //sin argumentos va a home
+          else if(argc == 2)dest=argv[1]; //Coge como argumento el siguiente
+          else{//si argc>2 demasiados argumentos y se va
+            printf("Too many arguments.\n");
+          }
+          if(dest!=NULL){
+            if(chdir(dest)==-1){
               perror("chdir");
             }
-          }
-          if(argc>=3){
-            printf("Too many arguments");
           }
           continue;
         }
 
         if(strcmp(argv[0], "jobs")==0){
+          mask_signal(SIGCHLD, SIG_BLOCK);
           print_job_list(listaProcesos);
+          mask_signal(SIGCHLD, SIG_UNBLOCK);
           continue;
         }
        if(strcmp(argv[0], "exit")==0){
@@ -182,7 +182,7 @@ int main(void)
           if(!background){
            tcsetpgrp(STDIN_FILENO, pid_fork); 
           }
-                    terminal_signals(SIG_DFL);
+          terminal_signals(SIG_DFL);
           execvp(argv[0], argv);
           perror(argv[0]);
           exit(EXIT_FAILURE);
@@ -197,6 +197,7 @@ int main(void)
               perror("waitpid");
               continue;
             }else{
+              mask_signal(SIGCHLD, SIG_BLOCK);
               if(WIFSIGNALED(wstatus)){
                 printf("[%d] (%s) Signaled by signal %d\n", pid_wait,argv[0], WTERMSIG(wstatus));
                 remove_item(listaProcesos, get_job_bypid(listaProcesos,pid_fork));
@@ -208,9 +209,12 @@ int main(void)
                     job * aux = get_job_bypid(listaProcesos, pid_fork);
                     aux->state = STOPPED;
               }}
+              mask_signal(SIGCHLD, SIG_UNBLOCK);
           }else{
+            mask_signal(SIGCHLD, SIG_BLOCK);
             printf("[%d] (%s) Running in background\n", pid_wait, argv[0]);
             insert_item(listaProcesos, new_job(pid_fork, argv[0],BACKGROUND));
+            mask_signal(SIGCHLD, SIG_UNBLOCK);
           } 
         }
 
@@ -224,6 +228,9 @@ int main(void)
 
     } // end while
     printf("\nBye\n");
+    free(argv);
+    traverse_list(listaProcesos, (void*)free_job);
+    free(listaProcesos);
     return 0;
 }
 
