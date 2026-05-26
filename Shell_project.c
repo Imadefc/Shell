@@ -175,23 +175,31 @@ int main(void)
         //Comando fg para poner en primer plano tareas en segundo plan
         // y tareas suspendidas
         if(strcmp(argv[0], "fg")==0){
-          if(argc==2){
+          
             mask_signal(SIGCHLD, SIG_BLOCK);
-            int pos = atoi(argv[1]);
-            if(pos==0){
+            int pos = argc>=2 ?atoi(argv[1]) : 1;
+            if(pos==0 ){
               printf("Segundo argumento invalido: %s.\n",argv[1]);
               mask_signal(SIGCHLD, SIG_UNBLOCK);
               continue;
             }
             job * elegido = get_item_bypos(listaProcesos, pos);
+            if(elegido==NULL){
+              mask_signal(SIGCHLD,SIG_UNBLOCK);
+              continue;
+            }
             if(elegido!=NULL){
+              
               pid_t fgpgid = elegido->pgid;
-              printf("[%d] (%s) Running in FOREGROUND\n", fgpgid, elegido->command);
+              char * fgcommand = strdup(elegido->command);
+              remove_item(listaProcesos, elegido);
+              insert_item(listaProcesos,new_job(fgpgid,fgcommand,FOREGROUND));
+              free(fgcommand);
+              elegido = get_item_bypos(listaProcesos,1);
+
+              printf("[%d] (%s) Running in FOREGROUND\n", fgpgid, elegido->command);//mostrar el mensaje
               tcsetpgrp(STDIN_FILENO, fgpgid);//le damos el control de la terminal al grupo del proceso
-              if(elegido->state == STOPPED){  //Si estaba parado le damos la señal que continue
-                kill(-fgpgid,SIGCONT);
-              }
-              elegido->state = FOREGROUND;
+              kill(-fgpgid, SIGCONT); //enviamos señal para que cambie de estado
 
 
               pid_wait = waitpid(fgpgid, &wstatus, WUNTRACED);
@@ -215,10 +223,39 @@ int main(void)
             mask_signal(SIGCHLD,SIG_UNBLOCK);
 
 
-          }else{
-            printf("Error en los argumentos.\n");
-          }
-          continue;
+            continue;
+        }
+        //Commando interno bg .Poner a ejecutar en segundo plano una tarea suspendida
+        if(strcmp(argv[0],"bg")==0){
+            int pos = argc>=2 ? atoi(argv[1]) : 1;
+            if(pos==0 ){
+              printf("Error con el segundo argumento : %s\n",argv[1]);
+              continue;
+            }
+            mask_signal(SIGCHLD, SIG_BLOCK);
+
+            job * elegido = get_item_bypos(listaProcesos,pos);
+            if (elegido==NULL){
+              mask_signal(SIGCHLD,SIG_UNBLOCK);
+              continue;
+            };
+            if(elegido!=NULL){
+              if(elegido->state!=BACKGROUND){
+                kill(-(elegido->pgid), SIGCONT);
+                elegido->state= BACKGROUND;
+                printf("[%i] (%s) Running in BACKGROUND\n", elegido->pgid, elegido->command);
+
+              }else{
+                printf("[%i] (%s) Already in BACKGROUND\n", elegido->pgid, elegido->command);
+              }
+
+            }else{
+              printf("No hay ninguna tarea con indice %i\n",pos);
+            }
+
+            mask_signal(SIGCHLD,SIG_UNBLOCK);
+
+             continue;
         }
        
         
@@ -231,7 +268,7 @@ int main(void)
         if(pid_fork ==0){
           setpgid(0,0);
           if(!background){
-           tcsetpgrp(STDIN_FILENO, pid_fork); 
+           tcsetpgrp(STDIN_FILENO, getpid()); 
           }
           terminal_signals(SIG_DFL);
           execvp(argv[0], argv);
@@ -263,7 +300,7 @@ int main(void)
               mask_signal(SIGCHLD, SIG_UNBLOCK);
           }else{
             mask_signal(SIGCHLD, SIG_BLOCK);
-            printf("[%d] (%s) Running in background\n", pid_wait, argv[0]);
+            printf("[%d] (%s) Running in background\n", pid_fork, argv[0]);
             insert_item(listaProcesos, new_job(pid_fork, argv[0],BACKGROUND));
             mask_signal(SIGCHLD, SIG_UNBLOCK);
           } 
