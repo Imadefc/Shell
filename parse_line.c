@@ -280,24 +280,25 @@ int parse_redirections(char **argv,  char **file_in, char **file_out)
     return argc;
 }
 
+//Cambio de $$ o $! o $? cadena de texto por sus respectivo valores numericos 
 int parse_autovars(int argc,char **argv,int pid,int waitpid, int wstatus ){
     for(int i = 0; i<argc ; i++){
+      int control = 0;
       char buffer[12];
-      if(strcmp(argv[i],"$$")==0){
-        snprintf(buffer, sizeof(buffer),"%d", pid);
-        free(argv[i]);
-        argv[i]= strdup(buffer);
-
+      if(strcmp(argv[i],"$$")==0){ 
+        snprintf(buffer, sizeof(buffer),"%d", pid); //Ponemos en buffer el valores
+        control=1;
       }else if(strcmp(argv[i],"$!")==0){
-        snprintf(buffer, sizeof(buffer),"%d", waitpid);
-        free(argv[i]);
-        argv[i]= strdup(buffer);
-
+        snprintf(buffer, sizeof(buffer),"%d", waitpid); //Ponemos valor en buffer
+        control=1;
       }else if(strcmp(argv[i],"$?")==0){
-        snprintf(buffer, sizeof(buffer),"%d", wstatus);
-        free(argv[i]);
-        argv[i]= strdup(buffer);
+        snprintf(buffer, sizeof(buffer),"%d", wstatus); //Ponemos valor en buffer
+        control=1;
+      }
 
+      if(control ==1){
+        free(argv[i]); //Eliminamos el string
+        argv[i]=strdup(buffer);//añadimos el valor a argv[i] que ahora vacio con strdup
       }
     }
 }
