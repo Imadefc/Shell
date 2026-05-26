@@ -214,7 +214,7 @@ int main(void)
             mask_signal(SIGCHLD, SIG_BLOCK);
             printf("[%d] (%s) Running in background\n", pid_wait, argv[0]);
             insert_item(listaProcesos, new_job(pid_fork, argv[0],BACKGROUND));
-            mask_signal(SIGCHLD, SIG_UNBLOCK);
+            mask_signal(SIGCHLD, SIG_UNBLOCK);
           } 
         }
 
