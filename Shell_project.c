@@ -121,14 +121,11 @@ int main(void)
         if (argc == 0) continue; // empty command after parsing comment #
         argc = parse_background(argv, &background);
         if (argc == 0) continue; // empty command after parsing background &
+        parse_autovars(argc, argv, pid_terminal, pid_fork, wstatus);// parse de las variables $$ $! $?
         argc = parse_redirections(argv,  &file_in, &file_out);
         if (argc == 0) continue; // empty command after parsing redirections
         parse_escape(argv);
-        int control = parse_autovars(argc, argv, pid_terminal, pid_fork, wstatus);
-        if(control==-1){
-          printf("Error en parse autovars\n");
-          continue;
-        }
+        
 
         //Comandos internos
         if(strcmp(argv[0], "cd")==0){
