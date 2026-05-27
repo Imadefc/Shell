@@ -8,6 +8,8 @@
 //
 // Adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
 // -----------------------------------------------------------------------------
+// Nombre y apellidos: Imad El Founti Chaib
+// -----------------------------------------------------------------------------
 
 #include <stdio.h>          // printf, stderr
 #include <stdlib.h>         // malloc, free
@@ -32,7 +34,8 @@ job * new_job(pid_t pid, const char *command, enum job_state state)
     aux->command = command? strdup(command): NULL;
     // Initiallize new fields if required
     aux->argv = NULL;
-    tcgetattr(STDIN_FILENO, &(aux->modes));
+    tcgetattr(STDIN_FILENO, &(aux->modes));// Inicializamos con la config 
+                                           // actual
     return aux;
 }
 // -----------------------------------------------------------------------------

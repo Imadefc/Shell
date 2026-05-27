@@ -10,7 +10,7 @@
 //    ShellSO > 
 //     (then type ^D to exit program)
 //------------------------------------------------------------------------------
-
+// Nombre y apellidos: Imad El Founti Chaib
 // standard headers
 #include <stdio.h>          // printf, stderr, perror, fprintf
 #include <stdlib.h>         // malloc, free

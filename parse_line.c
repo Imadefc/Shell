@@ -2,6 +2,9 @@
 // UNIX Shell Project
 // command line parsing
 // -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Nombre y apellidos: Imad El Founti Chaib
+// -----------------------------------------------------------------------------
 
 #include <stdlib.h>     // malloc, realloc, free
 #include <stdio.h>      // perror, fprintf(debug)
@@ -302,6 +305,8 @@ int parse_autovars(int argc,char **argv,int pid,int waitpid, int wstatus ){
       }
     }
 }
+
+// Correccion de caracter escape
 int parse_escape(char **argv)
 {
     int argc = 0;

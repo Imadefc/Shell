@@ -6,6 +6,9 @@
 // Dept. Arquitectura de Computadores - UMA
 //
 // -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Nombre y apellidos: Imad El Founti Chaib
+// -----------------------------------------------------------------------------
 
 #ifndef _JOB_CONTROL_H
 #define _JOB_CONTROL_H
@@ -27,7 +30,7 @@ typedef struct
     char *command;  // program name = argv[0]
     enum job_state state;
     // Add here new fields if required
-    struct termios modes; // guarda configuracion de JOB
+    struct termios modes; // guarda configuracion de JOB de terminal
     char **argv;
 } job;
 
