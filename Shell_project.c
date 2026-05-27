@@ -84,7 +84,7 @@ void myHandler(int signal){
                 tcgetattr(STDIN_FILENO,&(aux->modes));
               }
               if(WIFCONTINUED(wstatus)){
-                   printf("[%d] Continued .", pid_wait);
+                   printf("[%d] Continued .\n", pid_wait);
                    aux->state = BACKGROUND;
               }
     }
