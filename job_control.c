@@ -16,6 +16,7 @@
 #include "list.h"           // traverse_list, get_item_byfunc
 #include "job_control.h"    // job type, check prototypes match with implemented
 #include "parse_line.h"     // free_args
+#include <unistd.h>
 
 // -----------------------------------------------------------------------------
 //  FUNCTIONS for JOBS management
@@ -31,6 +32,7 @@ job * new_job(pid_t pid, const char *command, enum job_state state)
     aux->command = command? strdup(command): NULL;
     // Initiallize new fields if required
     aux->argv = NULL;
+    tcgetattr(STDIN_FILENO, &(aux->modes));
     return aux;
 }
 // -----------------------------------------------------------------------------

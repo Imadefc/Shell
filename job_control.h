@@ -11,7 +11,7 @@
 #define _JOB_CONTROL_H
 
 #include "list.h"   // insert_item, remove_item, check_item, get_item_bypos
-
+#include <termios.h>
 // -----------------------------------------------------------------------------
 //      PUBLIC functions, enumerations, structures, types
 // -----------------------------------------------------------------------------
@@ -27,6 +27,7 @@ typedef struct
     char *command;  // program name = argv[0]
     enum job_state state;
     // Add here new fields if required
+    struct termios modes; // guarda configuracion de JOB
     char **argv;
 } job;
 

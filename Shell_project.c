@@ -18,7 +18,7 @@
 #include <string.h>         // strcmp
 #include <fcntl.h>          // open
 #include <unistd.h>         // fork, execvp, tcgetpgrp, dup2, close
-//#include <termios.h>
+#include <termios.h>
 #include <signal.h>         // signal
 #include <sys/wait.h>       // waitpid
 //#include <sys/types.h>
@@ -34,7 +34,8 @@
 // -----------------------------------------------------------------------------
 // Declara aqui las variables globales que tengan que ser accedidas desde los
 //  manejadores establecidos con signal() o sigaction()i
-list_head_t * listaProcesos;
+list_head_t * listaProcesos; //lista de procesos
+struct termios shell_modos; //variable conf de shell
 // -----------------------------------------------------------------------------
 // Useful functions to deal with signal handlers and signal masks
 // -----------------------------------------------------------------------------
@@ -80,6 +81,7 @@ void myHandler(int signal){
               if(WIFSTOPPED(wstatus)) {
                 printf("[%d] Stopped by Signal:  %d\n", pid_wait,WSTOPSIG(wstatus));
                 aux->state = STOPPED;
+                tcgetattr(STDIN_FILENO,&(aux->modes));
               }
               if(WIFCONTINUED(wstatus)){
                    printf("[%d] Continued .", pid_wait);
@@ -106,6 +108,7 @@ int main(void)
     char *file_in=NULL;
     char *file_out=NULL;   // for redirections
     terminal_signals(SIG_IGN);
+    tcgetattr(STDIN_FILENO,&shell_modos);
     int pid_terminal = getpid();
     signal(SIGCHLD, myHandler); //manejador de la señal sigchild
     while (1) {
@@ -192,13 +195,16 @@ int main(void)
               
               pid_t fgpgid = elegido->pgid;
               char * fgcommand = strdup(elegido->command);
+              struct termios configProceso = elegido->modes;
               remove_item(listaProcesos, elegido);
               insert_item(listaProcesos,new_job(fgpgid,fgcommand,FOREGROUND));
               free(fgcommand);
               elegido = get_item_bypos(listaProcesos,1);
+              elegido->modes = configProceso;
 
               printf("[%d] (%s) Running in FOREGROUND\n", fgpgid, elegido->command);//mostrar el mensaje
               tcsetpgrp(STDIN_FILENO, fgpgid);//le damos el control de la terminal al grupo del proceso
+              tcsetattr(STDIN_FILENO,TCSANOW, &(elegido->modes));//aplicamos conf de trabajo
               kill(-fgpgid, SIGCONT); //enviamos señal para que cambie de estado
 
 
@@ -215,10 +221,12 @@ int main(void)
                         } else if (WIFSTOPPED(wstatus)) {
                             printf("[%d] (%s) Stopped by Signal: %d\n", pid_wait, elegido->command, WSTOPSIG(wstatus));
                             elegido->state = STOPPED;
+                            tcgetattr(STDIN_FILENO,&(elegido->modes));
                         }
                     } else {
                         perror("waitpid en fg");
-                    }            
+                    }   
+              tcsetattr(STDIN_FILENO,TCSANOW,&shell_modos);
             }
             mask_signal(SIGCHLD,SIG_UNBLOCK);
 
@@ -304,12 +312,16 @@ int main(void)
           execvp(argv[0], argv);
           perror(argv[0]);
           exit(EXIT_FAILURE);
-        }else{ 
-          if(!background){
-            insert_item(listaProcesos, new_job(pid_fork,argv[0], FOREGROUND));
-            setpgid(pid_fork,pid_fork);
+        }else{
+
+          //PADRE
+          if(!background){                                                    //Primer plano
+            insert_item(listaProcesos, new_job(pid_fork,argv[0], FOREGROUND));//insertar en cola
+            setpgid(pid_fork,pid_fork);                                       //creacion del grupo en carrera
             tcsetpgrp(STDIN_FILENO,pid_fork);
-            pid_wait = waitpid(pid_fork, &wstatus, WUNTRACED);
+            //asignacion de terminal
+            mask_signal(SIGCHLD,SIG_BLOCK);
+            pid_wait = waitpid(pid_fork, &wstatus, WUNTRACED);                //Esperamos hijo
             tcsetpgrp(STDIN_FILENO,getpid());
             if(-1 == pid_wait){
               perror("waitpid");
@@ -326,7 +338,9 @@ int main(void)
                     printf("[%d] (%s) Stopped by Signal:  %d\n", pid_wait, argv[0],WSTOPSIG(wstatus));
                     job * aux = get_job_bypid(listaProcesos, pid_fork);
                     aux->state = STOPPED;
+                    tcgetattr(STDIN_FILENO,&(aux->modes));
               }}
+              tcsetattr(STDIN_FILENO,TCSANOW,&shell_modos);
               mask_signal(SIGCHLD, SIG_UNBLOCK);
           }else{
             mask_signal(SIGCHLD, SIG_BLOCK);
@@ -334,6 +348,7 @@ int main(void)
             insert_item(listaProcesos, new_job(pid_fork, argv[0],BACKGROUND));
             mask_signal(SIGCHLD, SIG_UNBLOCK);
           } 
+        
         }
 
 
@@ -345,6 +360,7 @@ int main(void)
         // (5) loop ret
 
     } // end while
+    tcsetattr(STDIN_FILENO,TCSANOW,&shell_modos);
     printf("\nBye\n");
     free(argv);
     traverse_list(listaProcesos, (void*)free_job);
