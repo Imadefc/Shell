@@ -57,7 +57,7 @@ void mask_signal(int signal, int block)
     sigprocmask(block, &mask, NULL); // block: SIG_BLOCK/SIG_UNBLOCK
 }
 //------------------------------------------------------------------------------
-
+//handler para controlar las señales sigchild de los procesos 
 void myHandler(int signal){
   int wstatus;
   int pid_wait;
@@ -142,7 +142,7 @@ int main(void)
           }
           continue;
         }
-
+        //comando para imprimir los jobs almacenados en la lista
         if(strcmp(argv[0], "jobs")==0){
           mask_signal(SIGCHLD, SIG_BLOCK);
           print_job_list(listaProcesos);
@@ -257,20 +257,50 @@ int main(void)
 
              continue;
         }
+
+
        
         
-        pid_fork = fork();
+        pid_fork = fork();//creacion del hijo
         if(pid_fork == -1){
           perror("fork");
           continue;
         }
 
-        if(pid_fork ==0){
+        if(pid_fork ==0){//HIJO
           setpgid(0,0);
           if(!background){
            tcsetpgrp(STDIN_FILENO, getpid()); 
           }
           terminal_signals(SIG_DFL);
+          //control de la entrada 
+          if(file_in!=NULL){
+             int fd_in = open(file_in,O_RDONLY);
+              if(fd_in==1){
+                perror("Error abriendo el fichero de entrada");
+                exit(EXIT_FAILURE);
+              }
+
+              if(dup2(fd_in, STDIN_FILENO)==-1){
+                perror("Error dup2 para entrada");
+              }
+              close(fd_in);
+
+          } 
+
+          if(file_out !=NULL){
+            int fd_out = open(file_out, O_WRONLY| O_CREAT | O_TRUNC, 0644);
+            if(fd_out==-1){
+              perror("Error abriendo el fichero de salida");
+              exit(EXIT_FAILURE);
+            }
+            if(dup2(fd_out,STDOUT_FILENO)==-1){
+              perror("Error en dup2 para salida");
+              exit(EXIT_FAILURE);
+            }
+            close(fd_out);
+          }
+         
           execvp(argv[0], argv);
           perror(argv[0]);
           exit(EXIT_FAILURE);
