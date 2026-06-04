@@ -176,51 +176,51 @@ int main(void)
        }*/
 
        if(strcmp(argv[0], "bgteam")==0){
-        if (argc>=3){
+        if(argc>=3){
           int N = atoi(argv[1]);
-          if(N<=0)continue;
-
-          int inicio = 2;
-          int i =0;
-          while(i<inicio){
-            free(argv[i]);
-            argv[i]=NULL;
-            i++;
-          }
-          int k=0;
-          while(k+inicio<argc){
-            argv[k]= argv[k+inicio];
-            k++;
-          }
-          argc = argc- inicio;
-
-          for(int j=0; j<N; j++){
-            pid_fork = fork();
-            if(pid_fork==-1){
-              perror("fork");
-              continue;
+          if(N>0){
+            int inicio = 2;
+            free(argv[1]);
+            free(argv[0]);
+            argv[0]==NULL;
+            argv[1]==NULL;
+            int k =0;
+            while(argv[k+2]!=NULL){
+              argv[k] = argv[k+2];
+              k++;
             }
-            if(pid_fork==0){
-              setpgid(0,0);
-              terminal_signals(SIG_DFL);
-              execvp(argv[0], argv);
-              perror(argv[0]);
-              exit(EXIT_FAILURE);
-            }else{
+            for (int i = k; i < argc; i++)
+            {
+              argv[i] = NULL;
+            }
+            
+            
+            
+            argc-=inicio;
+            for(int i =0; i<N; i++){
               mask_signal(SIGCHLD, SIG_BLOCK);
-              insert_item(listaProcesos, new_job(pid_fork, argv[0], BACKGROUND));
-              mask_signal(SIGCHLD, SIG_UNBLOCK);
+              pid_fork = fork();
+              if(pid_fork==-1){
+                perror("fork");
+                continue;
+              }else if(pid_fork==0){
+                mask_signal(SIGCHLD, SIG_UNBLOCK);
+                setpgid(0,0);
+                terminal_signals(SIG_DFL);
+                execvp(argv[0], argv);
+                perror(argv[0]);
+                exit(EXIT_FAILURE);
+              }else{
+                
+                printf("[%d] (%s) Running in background\n", pid_fork, argv[0]);
+                insert_item(listaProcesos, new_job(pid_fork, argv[0],BACKGROUND));
+                mask_signal(SIGCHLD, SIG_UNBLOCK);
+              }
             }
+            
           }
-
-          
-
-
-        }else{
-          printf("El comando bgteam requiere dos argumentos\n");
         }
         continue;
-        
       }
 
 
