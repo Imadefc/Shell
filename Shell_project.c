@@ -75,6 +75,11 @@ void myHandler(int signal){
                 remove_item(listaProcesos,get_job_bypid(listaProcesos,pid_wait));
               }
               if(WIFEXITED(wstatus)){
+                if(WEXITSTATUS(wstatus)==255){
+                  remove_item(listaProcesos,get_job_bypid(listaProcesos,pid_wait));
+                  continue;
+                };
+                
                 printf("[%d] (%s) Terminated by signal %d\n", pid_wait,aux->command,WEXITSTATUS(wstatus));
                 if(aux->state == RESPAWN){
                   int pid_fork = fork();
@@ -207,9 +212,12 @@ int main(void)
          }else  if(pid_fork ==0){//HIJO
           setpgid(0,0);
           terminal_signals(SIG_DFL);
+          mask_signal(SIGCHLD, SIG_BLOCK); // Desbloqueamos SIGCHLD antes de ejecutar el comando
           execvp(argv[0], argv);
           perror(argv[0]);
-          exit(EXIT_FAILURE);
+          exit(255);
+          mask_signal(SIGCHLD, SIG_UNBLOCK);
+          continue; // Bloqueamos SIGCHLD después de ejecutar el comando
          }else{
           job* new = new_job(pid_fork, argv[0], RESPAWN);
           insert_item(listaProcesos, new);
