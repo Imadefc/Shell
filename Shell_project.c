@@ -175,6 +175,18 @@ int main(void)
          }
        }*/
 
+       if(strcmp(argv[0], "currjob")==0){
+          mask_signal(SIGCHLD, SIG_BLOCK);
+          job * aux = get_item_bypos(listaProcesos,1);
+          if(aux==NULL){
+            printf("No hay trabajo actual.\n");
+          }else{
+            printf("Trabajo actual : PID=%d command=%s\n", aux->pgid, aux->command);
+          }
+          mask_signal(SIGCHLD, SIG_UNBLOCK);
+          continue;
+       }
+
         //Comando fg para poner en primer plano tareas en segundo plan
         // y tareas suspendidas
         if(strcmp(argv[0], "fg")==0){
