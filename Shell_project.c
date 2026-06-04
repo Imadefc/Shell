@@ -84,21 +84,11 @@ void myHandler(int signal){
                   }else  if(pid_fork ==0){//HIJO
                     setpgid(0,0);
                     terminal_signals(SIG_DFL);
-                    
-                    // --- MAGIA AQUÍ ---
-                    // Convertimos el string "sleep 3" en un array ["sleep", "3", NULL]
-                    char *args[64];
-                    int i = 0;
-                    char *token = strtok(aux->command, " \t\n");
-                    while (token != NULL) {
-                        args[i++] = token;
-                        token = strtok(NULL, " \t\n");
-                    }
-                    args[i] = NULL; // El array siempre debe terminar en NULL
                     mask_signal(SIGCHLD, SIG_BLOCK); // Desbloqueamos SIGCHLD antes de ejecutar el comando
-                    execvp(args[0], args);
-                    perror(args[0]);
+                    execvp(aux->command, aux->argv);
+                    perror(aux->command);
                     exit(EXIT_FAILURE);
+                    mask_signal(SIGCHLD, SIG_UNBLOCK); // Bloqueamos SIGCHLD después de ejecutar el comando
                   }else{ //PADRE
                     job* new = new_job(pid_fork, aux->command, RESPAWN);
                     insert_item(listaProcesos, new);
