@@ -115,7 +115,9 @@ int main(void)
     while (1) {
         free_argv(argv);
         if(file_in!=NULL) free(file_in);
+        file_in=NULL;
         if (file_out!=NULL) { free(file_out);
+          file_out=NULL;
         }
         int ret = get_command("ShellSO > ", &argc, &argv);
         if (ret == -1) exit(EXIT_FAILURE);      // error in read(2)
