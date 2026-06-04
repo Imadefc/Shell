@@ -209,6 +209,22 @@ int parse_background(char **argv, int *background)
     return argc;
 }
 
+int parse_respawn(char ** argv,  int *respawn){
+    int argc = 0;
+    *respawn = 0;
+    while (*argv && **argv != '+') {
+        argv++;
+        argc++;
+    }
+    if (*argv) *respawn = 1; // (**argv == '+')
+    while (*argv) {
+        free(*argv);
+        *argv = NULL;
+        argv++;
+    }
+    return argc;
+}
+
 // -----------------------------------------------------------------------------
 // Parse redirections operators '<' '>' once argv structure has been built.
 // Example of use:

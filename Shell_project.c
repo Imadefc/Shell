@@ -69,14 +69,58 @@ void myHandler(int signal){
     }
     else{
               job * aux = get_job_bypid(listaProcesos, pid_wait);
-
+              if(aux==NULL)continue;
               if(WIFSIGNALED(wstatus)){
                 printf("[%d] (%s) Signaled by signal %d\n",pid_wait,aux->command, WTERMSIG(wstatus));
+                if(aux->state == RESPAWN){
+                  int pid_fork = fork();
+                  if(pid_fork == -1){
+                    perror("fork");
+                    continue;
+                  }else  if(pid_fork ==0){//HIJO
+                    setpgid(0,0);
+                    terminal_signals(SIG_DFL);
+                    mask_signal(SIGCHLD, SIG_BLOCK); // Desbloqueamos SIGCHLD antes de ejecutar el comando
+                    execvp(aux->command, aux->argv);
+                    perror(aux->command);
+                    exit(255);
+                    mask_signal(SIGCHLD, SIG_UNBLOCK); // Bloqueamos SIGCHLD después de ejecutar el comando
+                  }else{ //PADRE
+                    job* new = new_job(pid_fork, aux->command, RESPAWN);
+                    insert_item(listaProcesos, new);
+                  }
+                }
                 remove_item(listaProcesos,get_job_bypid(listaProcesos,pid_wait));
               }
               if(WIFEXITED(wstatus)){
+                if(WEXITSTATUS(wstatus)==255){
+                  remove_item(listaProcesos,get_job_bypid(listaProcesos,pid_wait));
+                  continue;
+                };
+                
                 printf("[%d] (%s) Terminated by signal %d\n", pid_wait,aux->command,WEXITSTATUS(wstatus));
+                if(aux->state == RESPAWN){
+                  int pid_fork = fork();
+                  if(pid_fork == -1){
+                    perror("fork");
+                    continue;
+                  }else  if(pid_fork ==0){//HIJO
+                    setpgid(0,0);
+                    terminal_signals(SIG_DFL);
+                    mask_signal(SIGCHLD, SIG_BLOCK); // Desbloqueamos SIGCHLD antes de ejecutar el comando
+                    execvp(aux->command, aux->argv);
+                    perror(aux->command);
+                    exit(EXIT_FAILURE);
+                    mask_signal(SIGCHLD, SIG_UNBLOCK); // Bloqueamos SIGCHLD después de ejecutar el comando
+                  }else{ //PADRE
+                    job* new = new_job(pid_fork, aux->command, RESPAWN);
+                    insert_item(listaProcesos, new);
+                  }
+                }
+                
+                
                 remove_item(listaProcesos,get_job_bypid(listaProcesos,pid_wait));
+                mask_signal(SIGCHLD, SIG_UNBLOCK);
               }
               if(WIFSTOPPED(wstatus)) {
                 printf("[%d] Stopped by Signal:  %d\n", pid_wait,WSTOPSIG(wstatus));
@@ -108,6 +152,7 @@ int main(void)
     int background;             // equals 1 if a command is followed by '&'
     int pid_fork, pid_wait;     // pid for created and waited process
     int wstatus;           // status returned by waitpid
+    int respawn;
     listaProcesos = new_list("Jobs");
     char *file_in=NULL;
     char *file_out=NULL;   // for redirections
@@ -129,6 +174,8 @@ int main(void)
         if (argc == 0) continue; // empty command after parsing comment #
         argc = parse_background(argv, &background);
         if (argc == 0) continue; // empty command after parsing background &
+        argc= parse_respawn(argv,  &respawn);
+        if(argc==0)continue;
         parse_autovars(argc, argv, pid_terminal, pid_fork, wstatus);// parse de las variables $$ $! $?
         argc = parse_redirections(argv,  &file_in, &file_out);
         if (argc == 0) continue; // empty command after parsing redirections
@@ -181,6 +228,7 @@ int main(void)
        }*/
 
 
+
        if(strcmp(argv[0], "mask")==0){
         int error =0;
           if(argc>=3){
@@ -225,6 +273,30 @@ int main(void)
            continue;
           }
          }
+
+       if(respawn){
+         pid_fork = fork();
+         if(pid_fork == -1){
+          perror("fork");
+          continue;
+         }else  if(pid_fork ==0){//HIJO
+          setpgid(0,0);
+          sigprocmask(SIG_BLOCK, &custom_mask_set, NULL);
+          terminal_signals(SIG_DFL);
+          mask_signal(SIGCHLD, SIG_BLOCK); // Desbloqueamos SIGCHLD antes de ejecutar el comando
+          execvp(argv[0], argv);
+          perror(argv[0]);
+          exit(255);
+          mask_signal(SIGCHLD, SIG_UNBLOCK);
+          continue; // Bloqueamos SIGCHLD después de ejecutar el comando
+         }else{
+          job* new = new_job(pid_fork, argv[0], RESPAWN);
+          insert_item(listaProcesos, new);
+         }
+          
+        continue;
+       }
+
 
         //Comando fg para poner en primer plano tareas en segundo plan
         // y tareas suspendidas
