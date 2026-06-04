@@ -83,7 +83,7 @@ void myHandler(int signal){
                     mask_signal(SIGCHLD, SIG_BLOCK); // Desbloqueamos SIGCHLD antes de ejecutar el comando
                     execvp(aux->command, aux->argv);
                     perror(aux->command);
-                    exit(EXIT_FAILURE);
+                    exit(255);
                     mask_signal(SIGCHLD, SIG_UNBLOCK); // Bloqueamos SIGCHLD después de ejecutar el comando
                   }else{ //PADRE
                     job* new = new_job(pid_fork, aux->command, RESPAWN);
