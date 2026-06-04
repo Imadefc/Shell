@@ -175,6 +175,17 @@ int main(void)
          }
        }*/
 
+
+	if(strcmp(argv[0],"exit")==0){
+		int salir =0;
+		if(argc >=2){
+			salir= atoi(argv[1]);
+		}
+		free(argv);
+    		traverse_list(listaProcesos, (void*)free_job);
+    		free(listaProcesos);
+		exit(salir);
+	}
         //Comando fg para poner en primer plano tareas en segundo plan
         // y tareas suspendidas
         if(strcmp(argv[0], "fg")==0){
