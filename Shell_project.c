@@ -175,17 +175,54 @@ int main(void)
          }
        }*/
 
-       if(strcmp(argv[0], "currjob")==0){
-          mask_signal(SIGCHLD, SIG_BLOCK);
-          job * aux = get_item_bypos(listaProcesos,1);
-          if(aux==NULL){
-            printf("No hay trabajo actual.\n");
-          }else{
-            printf("Trabajo actual : PID=%d command=%s\n", aux->pgid, aux->command);
+       if(strcmp(argv[0], "bgteam")==0){
+        if (argc>=3){
+          int N = atoi(argv[1]);
+          if(N<=0)continue;
+
+          int inicio = 2;
+          int i =0;
+          while(i<inicio){
+            free(argv[i]);
+            argv[i]=NULL;
+            i++;
           }
-          mask_signal(SIGCHLD, SIG_UNBLOCK);
-          continue;
-       }
+          int k=0;
+          while(k+inicio<argc){
+            argv[k]= argv[k+inicio];
+            k++;
+          }
+          argc = argc- inicio;
+
+          for(int j=0; j<N; j++){
+            pid_fork = fork();
+            if(pid_fork==-1){
+              perror("fork");
+              continue;
+            }
+            if(pid_fork==0){
+              setpgid(0,0);
+              terminal_signals(SIG_DFL);
+              execvp(argv[0], argv);
+              perror(argv[0]);
+              exit(EXIT_FAILURE);
+            }else{
+              mask_signal(SIGCHLD, SIG_BLOCK);
+              insert_item(listaProcesos, new_job(pid_fork, argv[0], BACKGROUND));
+              mask_signal(SIGCHLD, SIG_UNBLOCK);
+            }
+          }
+
+          
+
+
+        }else{
+          printf("El comando bgteam requiere dos argumentos\n");
+        }
+        continue;
+        
+      }
+
 
         //Comando fg para poner en primer plano tareas en segundo plan
         // y tareas suspendidas
@@ -277,6 +314,8 @@ int main(void)
 
              continue;
         }
+
+      
 
 
        
