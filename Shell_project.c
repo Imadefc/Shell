@@ -72,6 +72,24 @@ void myHandler(int signal){
               if(aux==NULL)continue;
               if(WIFSIGNALED(wstatus)){
                 printf("[%d] (%s) Signaled by signal %d\n",pid_wait,aux->command, WTERMSIG(wstatus));
+                if(aux->state == RESPAWN){
+                  int pid_fork = fork();
+                  if(pid_fork == -1){
+                    perror("fork");
+                    continue;
+                  }else  if(pid_fork ==0){//HIJO
+                    setpgid(0,0);
+                    terminal_signals(SIG_DFL);
+                    mask_signal(SIGCHLD, SIG_BLOCK); // Desbloqueamos SIGCHLD antes de ejecutar el comando
+                    execvp(aux->command, aux->argv);
+                    perror(aux->command);
+                    exit(EXIT_FAILURE);
+                    mask_signal(SIGCHLD, SIG_UNBLOCK); // Bloqueamos SIGCHLD después de ejecutar el comando
+                  }else{ //PADRE
+                    job* new = new_job(pid_fork, aux->command, RESPAWN);
+                    insert_item(listaProcesos, new);
+                  }
+                }
                 remove_item(listaProcesos,get_job_bypid(listaProcesos,pid_wait));
               }
               if(WIFEXITED(wstatus)){
