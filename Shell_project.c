@@ -105,6 +105,7 @@ int main(void)
     int pid_fork, pid_wait;     // pid for created and waited process
     int wstatus;           // status returned by waitpid
     listaProcesos = new_list("Jobs");
+    char * anterior=NULL;
     char *file_in=NULL;
     char *file_out=NULL;   // for redirections
     terminal_signals(SIG_IGN);
@@ -132,17 +133,26 @@ int main(void)
 
         //Comandos internos
         if(strcmp(argv[0], "cd")==0){
-          char *dest =NULL;
-          if(argc==1)dest=getenv("HOME"); //sin argumentos va a home
-          else if(argc == 2)dest=argv[1]; //Coge como argumento el siguiente
-          else{//si argc>2 demasiados argumentos y se va
-            printf("Too many arguments.\n");
-          }
+         char *dest=NULL;
+         char actual[1024];
+         getcwd(actual, sizeof(actual));
+          if(argc==1|| (argc>=2 && strcmp(argv[1],"~")==0)){
+          dest=getenv("HOME");
+         }else{
+           if (strcmp(argv[1],"-")==0) {
+             dest = anterior;
+           }else{
+             dest =argv[1];
+           }
+
+         }
           if(dest!=NULL){
-            if(chdir(dest)==-1){
-              perror("chdir");
-            }
+              if(chdir(dest)!=-1){
+                if(anterior!=NULL) free(anterior);
+                anterior= strdup(actual);
+              }
           }
+
           continue;
         }
         //comando para imprimir los jobs almacenados en la lista
