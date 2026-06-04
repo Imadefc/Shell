@@ -105,6 +105,7 @@ int main(void)
     int pid_fork, pid_wait;     // pid for created and waited process
     int wstatus;           // status returned by waitpid
     listaProcesos = new_list("Jobs");
+    int isappend=0;
     char *file_in=NULL;
     char *file_out=NULL;   // for redirections
     terminal_signals(SIG_IGN);
@@ -125,7 +126,7 @@ int main(void)
         argc = parse_background(argv, &background);
         if (argc == 0) continue; // empty command after parsing background &
         parse_autovars(argc, argv, pid_terminal, pid_fork, wstatus);// parse de las variables $$ $! $?
-        argc = parse_redirections(argv,  &file_in, &file_out);
+        argc = parse_redirections(argv,  &file_in, &file_out, &isappend);
         if (argc == 0) continue; // empty command after parsing redirections
         parse_escape(argv);
         
@@ -296,8 +297,20 @@ int main(void)
 
           } 
 
-          if(file_out !=NULL){
+          if(file_out !=NULL && !isappend){
             int fd_out = open(file_out, O_WRONLY| O_CREAT | O_TRUNC, 0644);
+            if(fd_out==-1){
+              perror("Error abriendo el fichero de salida");
+              exit(EXIT_FAILURE);
+            }
+            if(dup2(fd_out,STDOUT_FILENO)==-1){
+              perror("Error en dup2 para salida");
+              exit(EXIT_FAILURE);
+            }
+            close(fd_out);
+          }
+          if(file_out !=NULL && isappend){
+            int fd_out = open(file_out, O_WRONLY| O_CREAT | O_APPEND, 0644);
             if(fd_out==-1){
               perror("Error abriendo el fichero de salida");
               exit(EXIT_FAILURE);

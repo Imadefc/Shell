@@ -209,6 +209,7 @@ int parse_background(char **argv, int *background)
     return argc;
 }
 
+
 // -----------------------------------------------------------------------------
 // Parse redirections operators '<' '>' once argv structure has been built.
 // Example of use:
@@ -225,16 +226,18 @@ int parse_background(char **argv, int *background)
 // For a valid redirection, a blank space is required before and after
 // redirection operators '<' or '>'.
 // -----------------------------------------------------------------------------
-int parse_redirections(char **argv,  char **file_in, char **file_out)
+int parse_redirections(char **argv,  char **file_in, char **file_out, int *isappend)
 {
     *file_in = NULL;
     *file_out = NULL;
+    *isappend = 0;
     char **argv_start = argv;
     int argc = 0;
     while (*argv) {
         int is_in = !strcmp(*argv, "<");
         int is_out = !strcmp(*argv, ">");
-        if (is_in || is_out) {
+        int is_append = !strcmp(*argv, ">>");
+        if (is_in || is_out || is_append) {
             argv++;
             if (*argv) {
                 if (is_in) {
@@ -251,6 +254,16 @@ int parse_redirections(char **argv,  char **file_in, char **file_out)
                                         *file_out, *argv, *file_out);
                     } else {
                         *file_out = *argv;
+                        
+                    }
+                }
+                if(is_append){
+                    if(*file_out){
+                        fprintf(stderr, "too many output redirections: %s %s, keeping: %s\n",
+                                        *file_out, *argv, *file_out);
+                    } else {
+                        *file_out = *argv;
+                        *isappend = 1;
                     }
                 }
                 char **aux = argv + 1;
