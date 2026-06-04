@@ -69,14 +69,45 @@ void myHandler(int signal){
     }
     else{
               job * aux = get_job_bypid(listaProcesos, pid_wait);
-
+              if(aux==NULL)continue;
               if(WIFSIGNALED(wstatus)){
                 printf("[%d] (%s) Signaled by signal %d\n",pid_wait,aux->command, WTERMSIG(wstatus));
                 remove_item(listaProcesos,get_job_bypid(listaProcesos,pid_wait));
               }
               if(WIFEXITED(wstatus)){
                 printf("[%d] (%s) Terminated by signal %d\n", pid_wait,aux->command,WEXITSTATUS(wstatus));
+                if(aux->state == RESPAWN){
+                  int pid_fork = fork();
+                  if(pid_fork == -1){
+                    perror("fork");
+                    continue;
+                  }else  if(pid_fork ==0){//HIJO
+                    setpgid(0,0);
+                    terminal_signals(SIG_DFL);
+                    
+                    // --- MAGIA AQUÍ ---
+                    // Convertimos el string "sleep 3" en un array ["sleep", "3", NULL]
+                    char *args[64];
+                    int i = 0;
+                    char *token = strtok(aux->command, " \t\n");
+                    while (token != NULL) {
+                        args[i++] = token;
+                        token = strtok(NULL, " \t\n");
+                    }
+                    args[i] = NULL; // El array siempre debe terminar en NULL
+                    mask_signal(SIGCHLD, SIG_BLOCK); // Desbloqueamos SIGCHLD antes de ejecutar el comando
+                    execvp(args[0], args);
+                    perror(args[0]);
+                    exit(EXIT_FAILURE);
+                  }else{ //PADRE
+                    job* new = new_job(pid_fork, aux->command, RESPAWN);
+                    insert_item(listaProcesos, new);
+                  }
+                }
+                
+                
                 remove_item(listaProcesos,get_job_bypid(listaProcesos,pid_wait));
+                mask_signal(SIGCHLD, SIG_UNBLOCK);
               }
               if(WIFSTOPPED(wstatus)) {
                 printf("[%d] Stopped by Signal:  %d\n", pid_wait,WSTOPSIG(wstatus));
@@ -104,6 +135,7 @@ int main(void)
     int background;             // equals 1 if a command is followed by '&'
     int pid_fork, pid_wait;     // pid for created and waited process
     int wstatus;           // status returned by waitpid
+    int respawn;
     listaProcesos = new_list("Jobs");
     char *file_in=NULL;
     char *file_out=NULL;   // for redirections
@@ -124,6 +156,8 @@ int main(void)
         if (argc == 0) continue; // empty command after parsing comment #
         argc = parse_background(argv, &background);
         if (argc == 0) continue; // empty command after parsing background &
+        argc= parse_respawn(argv,  &respawn);
+        if(argc==0)continue;
         parse_autovars(argc, argv, pid_terminal, pid_fork, wstatus);// parse de las variables $$ $! $?
         argc = parse_redirections(argv,  &file_in, &file_out);
         if (argc == 0) continue; // empty command after parsing redirections
@@ -174,6 +208,25 @@ int main(void)
            continue;
          }
        }*/
+
+       if(respawn){
+         pid_fork = fork();
+         if(pid_fork == -1){
+          perror("fork");
+          continue;
+         }else  if(pid_fork ==0){//HIJO
+          setpgid(0,0);
+          terminal_signals(SIG_DFL);
+          execvp(argv[0], argv);
+          perror(argv[0]);
+          exit(EXIT_FAILURE);
+         }else{
+          job* new = new_job(pid_fork, argv[0], RESPAWN);
+          insert_item(listaProcesos, new);
+         }
+          
+        continue;
+       }
 
         //Comando fg para poner en primer plano tareas en segundo plan
         // y tareas suspendidas
