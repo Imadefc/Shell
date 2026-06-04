@@ -108,6 +108,7 @@ int main(void)
     char *file_in=NULL;
     char *file_out=NULL;   // for redirections
     terminal_signals(SIG_IGN);
+    int indicePrograma =0;
     tcgetattr(STDIN_FILENO,&shell_modos);
     int pid_terminal = getpid();
     signal(SIGCHLD, myHandler); //manejador de la señal sigchild
@@ -174,6 +175,19 @@ int main(void)
            continue;
          }
        }*/
+
+	//lanzabg
+	if(strcmp(argv[0],"lanzabg")==0){
+		if(argc>=2){
+      background=1;
+      for(int i =0; i<argc; i++){
+        argv[i]= argv[i+1];
+      } 
+      argc--;
+
+		}
+
+	}
 
         //Comando fg para poner en primer plano tareas en segundo plan
         // y tareas suspendidas
