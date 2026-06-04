@@ -100,6 +100,10 @@ int main(void)
 {
     char **argv = NULL;
     int argc;
+    int custom_mask =0;
+    int indiceMask =0;
+    sigset_t custom_mask_set;
+    sigemptyset(&custom_mask_set);
     // probably useful variables:
     int background;             // equals 1 if a command is followed by '&'
     int pid_fork, pid_wait;     // pid for created and waited process
@@ -174,6 +178,51 @@ int main(void)
            continue;
          }
        }*/
+
+
+       if(strcmp(argv[0], "mask")==0){
+          if(argc>=3){
+            int i =1;
+            while(strcmp(argv[i],"-c")!=0 && i<argc){
+              int numero = atoi(argv[i]);
+              if(numero == 0 && strcmp(argv[i],"0")!=0 || numero<0 ){
+                printf("mask: error de sintaxis\n");
+                break;
+              }else{
+                custom_mask = 1;
+                sigaddset(&custom_mask_set, numero);
+              }
+              i++;
+            }
+            if(i+1>=argc){
+              printf("mask: error de sintaxis\n");
+              continue;
+            }else{
+              int iniciocomando = i+1;
+              for (int j = 0; j < iniciocomando; j++){
+                free(argv[j]);
+              }
+              int k=0;
+              while(argv[iniciocomando+k]!=NULL){
+                argv[k] = argv[iniciocomando+k];
+                k++;
+              }
+              while (k>0)
+              {
+                argv[k]=NULL;
+                k--;
+               
+              }
+              argc = argc - iniciocomando;
+              
+              
+            }
+
+          }else{
+            printf("mask: error de sintaxis\n");
+           continue;
+          }
+         }
 
         //Comando fg para poner en primer plano tareas en segundo plan
         // y tareas suspendidas
@@ -276,6 +325,9 @@ int main(void)
         }
 
         if(pid_fork ==0){//HIJO
+          if(custom_mask){
+            sigprocmask(SIG_BLOCK, &custom_mask_set, NULL);
+          }
           setpgid(0,0);
           if(!background){
            tcsetpgrp(STDIN_FILENO, getpid()); 
