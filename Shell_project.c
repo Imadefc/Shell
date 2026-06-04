@@ -174,6 +174,14 @@ int main(void)
            continue;
          }
        }*/
+      if(strcmp(argv[0],"fico")==0){
+        free(argv[0]);
+        argv[0] = NULL;
+        char * buffer = "./cuentafich.sh";
+        argv[0]= strdup(buffer);
+      }
+     
+      
 
         //Comando fg para poner en primer plano tareas en segundo plan
         // y tareas suspendidas
