@@ -103,7 +103,7 @@ int main(void)
     int custom_mask =0;
     int indiceMask =0;
     sigset_t custom_mask_set;
-    sigemptyset(&custom_mask_set);
+    
     // probably useful variables:
     int background;             // equals 1 if a command is followed by '&'
     int pid_fork, pid_wait;     // pid for created and waited process
@@ -117,6 +117,7 @@ int main(void)
     signal(SIGCHLD, myHandler); //manejador de la señal sigchild
     while (1) {
         free_argv(argv);
+        sigemptyset(&custom_mask_set);
         if(file_in!=NULL) free(file_in);
         if (file_out!=NULL) { free(file_out);
         }
@@ -181,12 +182,13 @@ int main(void)
 
 
        if(strcmp(argv[0], "mask")==0){
+        int error =0;
           if(argc>=3){
             int i =1;
-            while(strcmp(argv[i],"-c")!=0 && i<argc){
+            while(i<argc && strcmp(argv[i],"-c")!=0){
               int numero = atoi(argv[i]);
               if(numero == 0 && strcmp(argv[i],"0")!=0 || numero<0 ){
-                printf("mask: error de sintaxis\n");
+                error =1;
                 break;
               }else{
                 custom_mask = 1;
@@ -194,7 +196,7 @@ int main(void)
               }
               i++;
             }
-            if(i+1>=argc){
+            if(i+1>=argc || error==1){
               printf("mask: error de sintaxis\n");
               continue;
             }else{
@@ -203,16 +205,16 @@ int main(void)
                 free(argv[j]);
               }
               int k=0;
+              for (int  i = 0; i < iniciocomando; i++)
+              {
+                argv[i] = NULL;
+              }
               while(argv[iniciocomando+k]!=NULL){
                 argv[k] = argv[iniciocomando+k];
                 k++;
               }
-              while (k>0)
-              {
-                argv[k]=NULL;
-                k--;
-               
-              }
+              
+              
               argc = argc - iniciocomando;
               
               
