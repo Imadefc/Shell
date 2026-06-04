@@ -36,6 +36,7 @@
 //  manejadores establecidos con signal() o sigaction()i
 list_head_t * listaProcesos; //lista de procesos
 struct termios shell_modos; //variable conf de shell
+FILE *hup;
 // -----------------------------------------------------------------------------
 // Useful functions to deal with signal handlers and signal masks
 // -----------------------------------------------------------------------------
@@ -90,6 +91,15 @@ void myHandler(int signal){
     }
   }
 }
+
+void handlerSIGHUP(){
+  printf("SIGHUP recibido\n");
+  hup =fopen("hup.txt","a");
+  if(hup){
+    fprintf(hup,"SIGHUP recibido\n");
+    fclose(hup);
+  }
+}
    // -----------------------------------------------------------------------------
 
 
@@ -107,6 +117,7 @@ int main(void)
     listaProcesos = new_list("Jobs");
     char *file_in=NULL;
     char *file_out=NULL;   // for redirections
+    signal(SIGHUP, handlerSIGHUP); //manejador para la señal SIGHUP
     terminal_signals(SIG_IGN);
     tcgetattr(STDIN_FILENO,&shell_modos);
     int pid_terminal = getpid();
